@@ -1,7 +1,9 @@
 #include <iostream>
 #include <vector>
 #include <string>
-
+#include <fstream>
+#include <cstdlib>
+#include <set>
 
 using namespace std;
 
@@ -361,7 +363,100 @@ class Grafo {
             }
             cout << "======================================================\n";
         }
+    void criarGrafoVisual() const {
+    if (vertices.empty()) {
+        cout << "O grafo esta vazio\n";
+        return;
+    }
 
+    // Cria o arquivo DOT
+    ofstream arquivo("grafo.dot");
+
+    if (!arquivo.is_open()) {
+        cout << "Erro ao criar o arquivo grafo.dot\n";
+        return;
+    }
+
+    // Define o tipo de grafo no Graphviz
+    if (direcionado) {
+        arquivo << "digraph G {\n";
+    } else {
+        arquivo << "graph G {\n";
+    }
+
+    // Estilo dos vertices
+    arquivo << "    node [shape=circle];\n";
+
+    // Adiciona todos os vertices
+    for (const auto& vertice : vertices) {
+        arquivo << "    \"" << vertice.id << "\";\n";
+    }
+
+    // Guarda as arestas que ja foram desenhadas
+    set<string> arestasDesenhadas;
+
+    // Percorre a lista de adjacencia
+    for (const auto& vertice : vertices) {
+
+        for (const auto& conexao : vertice.adjacentes) {
+
+            if (direcionado) {
+
+                // Grafo direcionado
+                arquivo << "    \""
+                        << vertice.id
+                        << "\" -> \""
+                        << conexao.destino
+                        << "\" [label=\""
+                        << conexao.id
+                        << " ("
+                        << conexao.peso
+                        << ")\"];\n";
+
+            } else {
+
+                // Cria uma identificacao para a aresta
+                string chave1 = vertice.id + "|" + conexao.destino;
+                string chave2 = conexao.destino + "|" + vertice.id;
+
+                // Verifica se a aresta ja foi desenhada
+                if (arestasDesenhadas.find(chave1) == arestasDesenhadas.end() &&
+                    arestasDesenhadas.find(chave2) == arestasDesenhadas.end()) {
+
+                    arquivo << "    \""
+                            << vertice.id
+                            << "\" -- \""
+                            << conexao.destino
+                            << "\" [label=\""
+                            << conexao.id
+                            << " ("
+                            << conexao.peso
+                            << ")\"];\n";
+
+                    arestasDesenhadas.insert(chave1);
+                }
+            }
+        }
+    }
+
+    arquivo << "}\n";
+
+    arquivo.close();
+
+    // Gera a imagem SVG
+    string comando = "dot -Tsvg grafo.dot -o grafo.svg";
+
+    int resultado = system(comando.c_str());
+
+    if (resultado != 0) {
+        cout << "Erro ao executar o Graphviz.\n";
+        cout << "Verifique se o Graphviz esta instalado.\n";
+        return;
+    }
+
+    cout << "\nGrafo visual gerado com sucesso!\n";
+    cout << "Arquivo: grafo.svg\n";
+}
 };
 
 //funções do main
@@ -378,6 +473,7 @@ void mostrarMenu() {
     cout << "9. Mostrar matriz de adjacencia\n";
     cout << "10. Mostrar matriz de incidencia\n";
     cout << "11. Mostrar grafo\n";
+    cout << "12. Criar grafo visual (SVG)\n";
     cout << "0. Sair\n";
     cout << "===================================\n";
     cout << "Escolha uma opcao: ";
@@ -398,14 +494,15 @@ int main() {
 
             switch (opcao) {
 
-                case 1:
+                case 1: {
                     string idVertice;
                     cout << "Digite o ID do novo vertice: ";
                     cin >> idVertice;
                     grafo.inserirVertice(idVertice);
                     break;
+                }
 
-                case 2: 
+                case 2: {
                     string idAresta, origem, destino;
                     double peso;
                     cout << "Digite o ID da aresta: ";
@@ -418,8 +515,9 @@ int main() {
                     cin >> peso;
                     grafo.inserirAresta(origem, destino, idAresta, peso);
                     break;
+                }
             
-                case 3:
+                case 3: {
                     string idArco, origem, destino;
                     double peso;
                     cout << "Digite o ID do arco: ";
@@ -432,22 +530,25 @@ int main() {
                     cin >> peso;
                     grafo.inserirArco(origem, destino, idArco, peso);
                     break;
+                }
 
-                case 4:
+                case 4: {
                     string idVertice;
                     cout << "Digite o ID do vertice: ";
                     cin >> idVertice;
                     grafo.removerVertice(idVertice);
                     break;
+                }
 
-                case 5:
+                case 5: {
                     string idLigacao;
                     cout << "Digite o ID da aresta/arco: ";
                     cin >> idLigacao;
                     grafo.removerLigacao(idLigacao);
                     break;
+                }
 
-                case 6:
+                case 6: {
                     string v1, v2;
                     cout << "Digite o primeiro vertice: ";
                     cin >> v1;
@@ -455,20 +556,23 @@ int main() {
                     cin >> v2;
                     grafo.saoAdjacentes(v1, v2);
                     break;
+                }
                             
-                case 7:
+                case 7: {
                     string idLigacao;
                     cout << "Digite o ID da aresta/arco: ";
                     cin >> idLigacao;
                     grafo.retornarValor(idLigacao);
                     break;
+                }
 
-                case 8:
+                case 8: {
                     string idLigacao;
                     cout << "Digite o ID da aresta/arco: ";
                     cin >> idLigacao;
                     grafo.retornarExtremidades(idLigacao);
                     break;
+                }
 
                 case 9:
                     grafo.mostrarMatrizAdjacencia();
@@ -480,6 +584,10 @@ int main() {
 
                 case 11:
                     grafo.mostrarGrafo();
+                    break;
+
+                case 12:
+                    grafo.criarGrafoVisual();
                     break;
 
                 case 0:
