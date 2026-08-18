@@ -1,6 +1,13 @@
-graph G {
+digraph G {
     node [shape=circle];
+    "A";
     "B";
     "C";
-    "B" -- "C" [label="BC (20)"];
+    "D";
+    "E";
+    "A" -> "B" [label="AB (10)"];
+    "A" -> "D" [label="AD (20)"];
+    "B" -> "E" [label="BE (12)"];
+    "D" -> "C" [label="DC (23)"];
+    "E" -> "C" [label="EC (3)"];
 }
