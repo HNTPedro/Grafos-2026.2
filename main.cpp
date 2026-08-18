@@ -369,7 +369,7 @@ class Grafo {
         return;
     }
 
-    // Cria o arquivo DOT
+
     ofstream arquivo("grafo.dot");
 
     if (!arquivo.is_open()) {
@@ -377,32 +377,27 @@ class Grafo {
         return;
     }
 
-    // Define o tipo de grafo no Graphviz
     if (direcionado) {
         arquivo << "digraph G {\n";
     } else {
         arquivo << "graph G {\n";
     }
 
-    // Estilo dos vertices
     arquivo << "    node [shape=circle];\n";
 
-    // Adiciona todos os vertices
     for (const auto& vertice : vertices) {
         arquivo << "    \"" << vertice.id << "\";\n";
     }
 
-    // Guarda as arestas que ja foram desenhadas
     set<string> arestasDesenhadas;
 
-    // Percorre a lista de adjacencia
     for (const auto& vertice : vertices) {
 
         for (const auto& conexao : vertice.adjacentes) {
 
             if (direcionado) {
 
-                // Grafo direcionado
+
                 arquivo << "    \""
                         << vertice.id
                         << "\" -> \""
@@ -415,11 +410,9 @@ class Grafo {
 
             } else {
 
-                // Cria uma identificacao para a aresta
-                string chave1 = vertice.id + "|" + conexao.destino;
+                            string chave1 = vertice.id + "|" + conexao.destino;
                 string chave2 = conexao.destino + "|" + vertice.id;
 
-                // Verifica se a aresta ja foi desenhada
                 if (arestasDesenhadas.find(chave1) == arestasDesenhadas.end() &&
                     arestasDesenhadas.find(chave2) == arestasDesenhadas.end()) {
 
@@ -443,7 +436,6 @@ class Grafo {
 
     arquivo.close();
 
-    // Gera a imagem SVG
     string comando = "dot -Tsvg grafo.dot -o grafo.svg";
 
     int resultado = system(comando.c_str());
