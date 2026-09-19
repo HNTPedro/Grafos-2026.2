@@ -1,30 +1,28 @@
 #include <iostream>
 #include <vector>
 #include <string>
-#include <fstream>
-#include <cstdlib>
-#include <set>
+#include <limits>
 
 using namespace std;
 
-//Estruturas abaixo.
-
+// Estrutura que representa a ligação (arco ou aresta)
 struct Conexao {
     string id;
     string destino;
     double peso;
-
 };
 
-struct Vertice{
+// Estrutura que representa um Vértice e a sua Lista de Adjacência
+struct Vertice {
     string id;
-    vector<Conexao> adjacentes;
+    vector<Conexao> adjacentes; // Lista de adjacência
 };
 
+// Classe principal do Grafo
 class Grafo {
     private:
-        vector<Vertice> vertices;
-        bool direcionado;
+        vector<Vertice> vertices; // Conjunto V de vértices
+        bool direcionado;         // Flag que indica se o grafo é dirigido ou não
 
         int buscarVertice(const string& id) const {
             for (size_t i = 0; i < vertices.size(); i++) {
@@ -33,6 +31,37 @@ class Grafo {
                 }
             }
             return -1;
+        }
+
+        // Função auxiliar recursiva para Busca em Profundidade (DFS)
+        bool dfsRecursivo(int atualIdx, int destIdx, vector<bool>& visitado, vector<string>& caminho, int nivel) const {
+            visitado[atualIdx] = true;
+            caminho.push_back(vertices[atualIdx].id);
+
+            // Condição de parada: encontrou o vértice procurado
+            if (atualIdx == destIdx) {
+                return true;
+            }
+
+            // Visita os vértices adjacentes
+            for (const auto& conexao : vertices[atualIdx].adjacentes) {
+                int proxIdx = buscarVertice(conexao.destino);
+                if (proxIdx != -1 && !visitado[proxIdx]) {
+                    
+                    // Desenha a árvore graficamente no terminal
+                    for(int i = 0; i < nivel; i++) cout << "    ";
+                    cout << "|-- [" << vertices[atualIdx].id << "] -> [" << conexao.destino << "]\n";
+
+                    // Chamada recursiva simulando a Pilha (LIFO)
+                    if (dfsRecursivo(proxIdx, destIdx, visitado, caminho, nivel + 1)) {
+                        return true; // Propaga a confirmação de que encontrou o destino
+                    }
+                }
+            }
+
+            // Backtracking: se não encontrou o destino neste caminho, remove da trilha atual
+            caminho.pop_back();
+            return false;
         }
 
     public:
@@ -45,16 +74,17 @@ class Grafo {
         }    
         
         bool inserirVertice(const string& id) {
-                if (buscarVertice(id) != -1) {
-                    cout << "Erro: O vertice '" << id << "' ja existe\n";
-                    return false;
-                }
-                Vertice novoVertice;
-                novoVertice.id = id;
-                vertices.push_back(novoVertice);
-                cout << "Vertice '" << id << "' inserido\n";
-                return true;
+            if (buscarVertice(id) != -1) {
+                cout << "Erro: O vertice '" << id << "' ja existe\n";
+                return false;
+            }
+            Vertice novoVertice;
+            novoVertice.id = id;
+            vertices.push_back(novoVertice);
+            cout << "Vertice '" << id << "' inserido\n";
+            return true;
         }
+
         bool inserirAresta(const string& origem, const string& destino, const string& idAresta, double peso) {
             if (direcionado) {
                 cout << "Erro: Grafo direcionado, use a opcao inserir arco\n";
@@ -71,6 +101,7 @@ class Grafo {
             ida.destino = destino;
             ida.peso = peso;
             vertices[idxOrigem].adjacentes.push_back(ida);
+
             if (idxOrigem != idxDestino) {
                 Conexao volta;
                 volta.id = idAresta;
@@ -126,7 +157,7 @@ class Grafo {
             }
 
             vertices.erase(vertices.begin() + idx);
-            cout << "Vertice '" << id << "' e  conexoes removidos\n";
+            cout << "Vertice '" << id << "' e conexoes removidos\n";
             return true;
         }
 
@@ -206,7 +237,7 @@ class Grafo {
             for (const auto& vertice : vertices) {
                 for (const auto& conexao : vertice.adjacentes) {
                     if (conexao.id == idLigacao) {
-                        cout << "Valor da ligacao'" << idLigacao << "': " << conexao.peso << "\n";
+                        cout << "Valor da ligacao '" << idLigacao << "': " << conexao.peso << "\n";
                         return;
                     }
                 }
@@ -363,95 +394,199 @@ class Grafo {
             }
             cout << "======================================================\n";
         }
-    void criarGrafoVisual() const {
-    if (vertices.empty()) {
-        cout << "O grafo esta vazio\n";
-        return;
-    }
 
-
-    ofstream arquivo("grafo.dot");
-
-    if (!arquivo.is_open()) {
-        cout << "Erro ao criar o arquivo grafo.dot\n";
-        return;
-    }
-
-    if (direcionado) {
-        arquivo << "digraph G {\n";
-    } else {
-        arquivo << "graph G {\n";
-    }
-
-    arquivo << "    node [shape=circle];\n";
-
-    for (const auto& vertice : vertices) {
-        arquivo << "    \"" << vertice.id << "\";\n";
-    }
-
-    set<string> arestasDesenhadas;
-
-    for (const auto& vertice : vertices) {
-
-        for (const auto& conexao : vertice.adjacentes) {
-
+        // Aplicar Algoritmo de PRIM e exibir a Árvore Geradora Mínima (AGM) no terminal
+        void aplicarPrim(const string& verticeInicial) const {
             if (direcionado) {
-
-
-                arquivo << "    \""
-                        << vertice.id
-                        << "\" -> \""
-                        << conexao.destino
-                        << "\" [label=\""
-                        << conexao.id
-                        << " ("
-                        << conexao.peso
-                        << ")\"];\n";
-
-            } else {
-
-                            string chave1 = vertice.id + "|" + conexao.destino;
-                string chave2 = conexao.destino + "|" + vertice.id;
-
-                if (arestasDesenhadas.find(chave1) == arestasDesenhadas.end() &&
-                    arestasDesenhadas.find(chave2) == arestasDesenhadas.end()) {
-
-                    arquivo << "    \""
-                            << vertice.id
-                            << "\" -- \""
-                            << conexao.destino
-                            << "\" [label=\""
-                            << conexao.id
-                            << " ("
-                            << conexao.peso
-                            << ")\"];\n";
-
-                    arestasDesenhadas.insert(chave1);
-                }
+                cout << "Aviso: O algoritmo de Prim e projetado principalmente para grafos nao direcionados.\n";
             }
+            if (vertices.empty()) {
+                cout << "O grafo esta vazio\n";
+                return;
+            }
+
+            int startIdx = buscarVertice(verticeInicial);
+            if (startIdx == -1) {
+                cout << "Erro: Vertice inicial '" << verticeInicial << "' nao encontrado no grafo.\n";
+                return;
+            }
+
+            int n = vertices.size();
+            vector<bool> visitado(n, false);
+            visitado[startIdx] = true;
+
+            struct ArestaMST {
+                string id;
+                string origem;
+                string destino;
+                double peso;
+            };
+
+            vector<ArestaMST> agm;
+            double custoTotal = 0.0;
+            int arestasAdicionadas = 0;
+
+            while (arestasAdicionadas < n - 1) {
+                double minPeso = numeric_limits<double>::max();
+                ArestaMST melhorAresta = {"", "", "", 0.0};
+                int proximoVertice = -1;
+                bool encontrou = false;
+
+                for (int i = 0; i < n; i++) {
+                    if (visitado[i]) {
+                        for (const auto& conexao : vertices[i].adjacentes) {
+                            int destIdx = buscarVertice(conexao.destino);
+                            if (destIdx != -1 && !visitado[destIdx]) {
+                                if (conexao.peso < minPeso) {
+                                    minPeso = conexao.peso;
+                                    melhorAresta = {conexao.id, vertices[i].id, conexao.destino, conexao.peso};
+                                    proximoVertice = destIdx;
+                                    encontrou = true;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (!encontrou) {
+                    cout << "Nota: O grafo e desconexo. A AGM cobrira apenas a componente alcancavel a partir de '" << verticeInicial << "'.\n";
+                    break;
+                }
+
+                visitado[proximoVertice] = true;
+                agm.push_back(melhorAresta);
+                custoTotal += melhorAresta.peso;
+                arestasAdicionadas++;
+            }
+
+            cout << "\n========= Arvore Geradora Minima (AGM) - PRIM =========\n";
+            cout << "Custo total da AGM: " << custoTotal << "\n";
+            cout << "Arestas pertencentes a AGM:\n";
+            for (const auto& aresta : agm) {
+                cout << "  [" << aresta.origem << "] --(ID: " << aresta.id << " / Peso: " << aresta.peso << ")--> [" << aresta.destino << "]\n";
+            }
+            cout << "=======================================================\n";
         }
-    }
 
-    arquivo << "}\n";
+        // Operação de Busca em Profundidade Guiada (DFS)
+        void aplicarDFS(const string& origem, const string& destino) const {
+            int idxOrigem = buscarVertice(origem);
+            int idxDestino = buscarVertice(destino);
 
-    arquivo.close();
+            if (idxOrigem == -1 || idxDestino == -1) {
+                cout << "Erro: Vertice de origem ou destino nao encontrado no grafo.\n";
+                return;
+            }
 
-    string comando = "dot -Tsvg grafo.dot -o grafo.svg";
+            cout << "\n========= Busca em Profundidade (DFS) =========\n";
+            cout << "Procurando caminho de '" << origem << "' para '" << destino << "'...\n\n";
+            cout << "Arvore de Busca Gerada:\n";
+            cout << "[" << origem << "]\n";
 
-    int resultado = system(comando.c_str());
+            vector<bool> visitado(vertices.size(), false);
+            vector<string> caminho; // Rastreia o caminho exato tomado até o destino
 
-    if (resultado != 0) {
-        cout << "Erro ao executar o Graphviz.\n";
-        cout << "Verifique se o Graphviz esta instalado.\n";
-        return;
-    }
+            bool encontrou = dfsRecursivo(idxOrigem, idxDestino, visitado, caminho, 1);
 
-    cout << "\nGrafo visual gerado com sucesso!\n";
-    cout << "Arquivo: grafo.svg\n";
-}
+            cout << "\nResultado da Busca:\n";
+            if (encontrou) {
+                cout << "Destino encontrado! Caminho percorrido: ";
+                for (size_t i = 0; i < caminho.size(); i++) {
+                    cout << caminho[i];
+                    if (i < caminho.size() - 1) cout << " -> ";
+                }
+                cout << "\n";
+            } else {
+                cout << "Nenhum caminho encontrado de '" << origem << "' para '" << destino << "'.\n";
+            }
+            cout << "===============================================\n";
+        }
+
+        // Algoritmo de Roy para encontrar Componentes Conexas / Fortemente Conexas
+        void aplicarRoy() const {
+            int n = vertices.size();
+            if (n == 0) {
+                cout << "O grafo esta vazio.\n";
+                return;
+            }
+
+            vector<bool> disponivel(n, true);
+            int numDisponiveis = n;
+            int numComponente = 1;
+
+            cout << "\n========= Algoritmo de Roy (Componentes Conexas) =========\n";
+
+            while (numDisponiveis > 0) {
+                int v = -1;
+                // Escolher um vértice 'v' qualquer não marcado/disponível
+                for (int i = 0; i < n; ++i) {
+                    if (disponivel[i]) {
+                        v = i;
+                        break;
+                    }
+                }
+
+                if (v == -1) break;
+
+                vector<bool> marcacaoPositiva(n, false);
+                vector<bool> marcacaoNegativa(n, false);
+
+                // Marcar v com (+) e (-)
+                marcacaoPositiva[v] = true;
+                marcacaoNegativa[v] = true;
+
+                // Propagar rotulação (+)
+                // Marcar w com (+) se tiver como sucessor um vértice já marcado com (+)
+                bool mudou;
+                do {
+                    mudou = false;
+                    for (int w = 0; w < n; ++w) {
+                        if (disponivel[w] && !marcacaoPositiva[w]) {
+                            for (const auto& conexao : vertices[w].adjacentes) {
+                                int sucIdx = buscarVertice(conexao.destino);
+                                if (sucIdx != -1 && disponivel[sucIdx] && marcacaoPositiva[sucIdx]) {
+                                    marcacaoPositiva[w] = true;
+                                    mudou = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                } while (mudou);
+
+                // Propagar rotulação (-)
+                // Marcar w com (-) se tiver como antecessor um vértice já marcado com (-)
+                do {
+                    mudou = false;
+                    for (int u = 0; u < n; ++u) { 
+                        if (disponivel[u] && marcacaoNegativa[u]) {
+                            for (const auto& conexao : vertices[u].adjacentes) {
+                                int w = buscarVertice(conexao.destino);
+                                if (w != -1 && disponivel[w] && !marcacaoNegativa[w]) {
+                                    marcacaoNegativa[w] = true;
+                                    mudou = true;
+                                }
+                            }
+                        }
+                    }
+                } while (mudou);
+
+                // Conjunto Si = vértices marcados com (+) e (-) simultaneamente
+                cout << (direcionado ? "Componente Fortemente Conexa " : "Componente Conexa ") << numComponente << ": { ";
+                for (int i = 0; i < n; ++i) {
+                    if (disponivel[i] && marcacaoPositiva[i] && marcacaoNegativa[i]) {
+                        cout << vertices[i].id << " ";
+                        disponivel[i] = false; // Retirar Si de V (conjunto de vértices disponíveis)
+                        numDisponiveis--;
+                    }
+                }
+                cout << "}\n";
+                numComponente++;
+            }
+            cout << "==========================================================\n";
+        }
 };
 
-//funções do main
 void mostrarMenu() {
     cout << "\n========== MENU DO GRAFO ==========\n";
     cout << "1. Inserir vertice\n";
@@ -465,132 +600,151 @@ void mostrarMenu() {
     cout << "9. Mostrar matriz de adjacencia\n";
     cout << "10. Mostrar matriz de incidencia\n";
     cout << "11. Mostrar grafo\n";
-    cout << "12. Criar grafo visual (SVG)\n";
+    cout << "12. Aplicar algoritmo de PRIM (AGM)\n";
+    cout << "13. Aplicar Busca em Profundidade (DFS - Guiada)\n";
+    cout << "14. Aplicar algoritmo de Roy (Componentes Conexas)\n";
     cout << "0. Sair\n";
     cout << "===================================\n";
     cout << "Escolha uma opcao: ";
-};
-
+}
 
 int main() {
     int tipoGrafo;
-        cout << "Deseja criar um grafo:\n1. Nao Direcionado\n2. Direcionado\nOpcao: ";
-        cin >> tipoGrafo;
-        Grafo grafo(tipoGrafo == 2);
+    cout << "Deseja criar um grafo:\n1. Nao Direcionado\n2. Direcionado\nOpcao: ";
+    cin >> tipoGrafo;
+    Grafo grafo(tipoGrafo == 2);
         
     int opcao;
 
-        do {
-            mostrarMenu();
-            cin >> opcao;
+    do {
+        mostrarMenu();
+        cin >> opcao;
 
-            switch (opcao) {
-
-                case 1: {
-                    string idVertice;
-                    cout << "Digite o ID do novo vertice: ";
-                    cin >> idVertice;
-                    grafo.inserirVertice(idVertice);
-                    break;
-                }
-
-                case 2: {
-                    string idAresta, origem, destino;
-                    double peso;
-                    cout << "Digite o ID da aresta: ";
-                    cin >> idAresta;
-                    cout << "Digite o vertice origem: ";
-                    cin >> origem;
-                    cout << "Digite o vertice destino: ";
-                    cin >> destino;
-                    cout << "Digite o peso da aresta: ";
-                    cin >> peso;
-                    grafo.inserirAresta(origem, destino, idAresta, peso);
-                    break;
-                }
-            
-                case 3: {
-                    string idArco, origem, destino;
-                    double peso;
-                    cout << "Digite o ID do arco: ";
-                    cin >> idArco;
-                    cout << "Digite o vertice origem: ";
-                    cin >> origem;
-                    cout << "Digite o vertice destino: ";
-                    cin >> destino;
-                    cout << "Digite o peso do arco: ";
-                    cin >> peso;
-                    grafo.inserirArco(origem, destino, idArco, peso);
-                    break;
-                }
-
-                case 4: {
-                    string idVertice;
-                    cout << "Digite o ID do vertice: ";
-                    cin >> idVertice;
-                    grafo.removerVertice(idVertice);
-                    break;
-                }
-
-                case 5: {
-                    string idLigacao;
-                    cout << "Digite o ID da aresta/arco: ";
-                    cin >> idLigacao;
-                    grafo.removerLigacao(idLigacao);
-                    break;
-                }
-
-                case 6: {
-                    string v1, v2;
-                    cout << "Digite o primeiro vertice: ";
-                    cin >> v1;
-                    cout << "Digite o segundo vertice: ";
-                    cin >> v2;
-                    grafo.saoAdjacentes(v1, v2);
-                    break;
-                }
-                            
-                case 7: {
-                    string idLigacao;
-                    cout << "Digite o ID da aresta/arco: ";
-                    cin >> idLigacao;
-                    grafo.retornarValor(idLigacao);
-                    break;
-                }
-
-                case 8: {
-                    string idLigacao;
-                    cout << "Digite o ID da aresta/arco: ";
-                    cin >> idLigacao;
-                    grafo.retornarExtremidades(idLigacao);
-                    break;
-                }
-
-                case 9:
-                    grafo.mostrarMatrizAdjacencia();
-                    break;
-
-                case 10:
-                    grafo.mostrarMatrizIncidencia();
-                    break;
-
-                case 11:
-                    grafo.mostrarGrafo();
-                    break;
-
-                case 12:
-                    grafo.criarGrafoVisual();
-                    break;
-
-                case 0:
-                    cout << "Encerrando programa...\n";
-                    break;
-
-                default:
-                    cout << "Opcao invalida!\n";
+        switch (opcao) {
+            case 1: {
+                string idVertice;
+                cout << "Digite o ID do novo vertice: ";
+                cin >> idVertice;
+                grafo.inserirVertice(idVertice);
+                break;
             }
 
-        } while (opcao != 0);
+            case 2: {
+                string idAresta, origem, destino;
+                double peso;
+                cout << "Digite o ID da aresta: ";
+                cin >> idAresta;
+                cout << "Digite o vertice origem: ";
+                cin >> origem;
+                cout << "Digite o vertice destino: ";
+                cin >> destino;
+                cout << "Digite o peso da aresta: ";
+                cin >> peso;
+                grafo.inserirAresta(origem, destino, idAresta, peso);
+                break;
+            }
+        
+            case 3: {
+                string idArco, origem, destino;
+                double peso;
+                cout << "Digite o ID do arco: ";
+                cin >> idArco;
+                cout << "Digite o vertice origem: ";
+                cin >> origem;
+                cout << "Digite o vertice destino: ";
+                cin >> destino;
+                cout << "Digite o peso do arco: ";
+                cin >> peso;
+                grafo.inserirArco(origem, destino, idArco, peso);
+                break;
+            }
 
-        return 0;
+            case 4: {
+                string idVertice;
+                cout << "Digite o ID do vertice: ";
+                cin >> idVertice;
+                grafo.removerVertice(idVertice);
+                break;
+            }
+
+            case 5: {
+                string idLigacao;
+                cout << "Digite o ID da aresta/arco: ";
+                cin >> idLigacao;
+                grafo.removerLigacao(idLigacao);
+                break;
+            }
+
+            case 6: {
+                string v1, v2;
+                cout << "Digite o primeiro vertice: ";
+                cin >> v1;
+                cout << "Digite o segundo vertice: ";
+                cin >> v2;
+                grafo.saoAdjacentes(v1, v2);
+                break;
+            }
+                        
+            case 7: {
+                string idLigacao;
+                cout << "Digite o ID da aresta/arco: ";
+                cin >> idLigacao;
+                grafo.retornarValor(idLigacao);
+                break;
+            }
+
+            case 8: {
+                string idLigacao;
+                cout << "Digite o ID da aresta/arco: ";
+                cin >> idLigacao;
+                grafo.retornarExtremidades(idLigacao);
+                break;
+            }
+
+            case 9:
+                grafo.mostrarMatrizAdjacencia();
+                break;
+
+            case 10:
+                grafo.mostrarMatrizIncidencia();
+                break;
+
+            case 11:
+                grafo.mostrarGrafo();
+                break;
+
+            case 12: {
+                string idInicio;
+                cout << "Digite o ID do vertice de inicio para o algoritmo de PRIM: ";
+                cin >> idInicio;
+                grafo.aplicarPrim(idInicio);
+                break;
+            }
+
+            case 13: {
+                string origem, destino;
+                cout << "Digite o ID do vertice de origem (saida): ";
+                cin >> origem;
+                cout << "Digite o ID do vertice de destino (chegada): ";
+                cin >> destino;
+                grafo.aplicarDFS(origem, destino);
+                break;
+            }
+
+            case 14: {
+                grafo.aplicarRoy();
+                break;
+            }
+
+            case 0:
+                cout << "Encerrando programa...\n";
+                break;
+
+            default:
+                cout << "Opcao invalida!\n";
+        }
+
+    } while (opcao != 0);
+
+    return 0;
 }
