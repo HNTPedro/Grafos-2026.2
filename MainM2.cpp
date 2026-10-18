@@ -22,6 +22,7 @@ private:
     string vizinhoId;
     string conexaoId;
 public:
+    //inicializa ID do vizinho e da conexão
     Adjacencia(const string& vizinho = "", const string& conexao = "")
         : vizinhoId(vizinho), conexaoId(conexao) {}
     const string& getVizinhoId() const { return vizinhoId; }
@@ -35,11 +36,13 @@ private:
     double longitude;
     vector<Adjacencia> adjacentes;
 public:
+    //inicializa com ID e coordenadas
     Vertice(const string& identificador = "", double lat = 0.0, double lon = 0.0)
         : id(identificador), latitude(lat), longitude(lon) {}
     const string& getId() const { return id; }
     double getLatitude() const { return latitude; }
     double getLongitude() const { return longitude; }
+    //referencia pra lista de adjacencia
     const vector<Adjacencia>& getAdjacentes() const { return adjacentes; }
     bool adicionarAdjacencia(const string& vizinho, const string& conexao) {
         for (const auto& a : adjacentes)
@@ -60,6 +63,7 @@ private:
     double peso;
     Tipo tipo;
 public:
+    //incia atributos da conexao
     Conexao(const string& identificador, const string& origemId, const string& destinoId,
             double valorPeso, Tipo tipoConexao)
         : id(identificador), origem(origemId), destino(destinoId), peso(valorPeso), tipo(tipoConexao) {}
@@ -178,6 +182,7 @@ public:
         }
         erro.clear(); return true;
     }
+    //valida e reconstrói carregamento de arquivo
     bool reconstruirParaCarga(string& erro) {
         if (!validar(erro)) return false;
         try { reconstruirAdjacencias(); }
@@ -185,12 +190,14 @@ public:
         return true;
     }
 };
-
+//gravacao e leitura de grafos em disco
 class PersistenciaGrafo {
 private:
     fs::path pasta;
 public:
+    //define pasta destino
     explicit PersistenciaGrafo(const fs::path& diretorio = "grafos") : pasta(diretorio) {}
+    //retorna caminho da pasta
     const fs::path& getPasta() const { return pasta; }
     bool garantirPasta(string& erro) const {
         error_code ec;
@@ -198,6 +205,7 @@ public:
         if (ec || !fs::is_directory(pasta, ec)) { erro = "Nao foi possivel acessar a pasta de grafos."; return false; }
         erro.clear(); return true;
     }
+    //retorna lista ordenada de caminhos arquivos .grafo
     vector<fs::path> listarArquivos(string& erro) const {
         vector<fs::path> r;
         if (!garantirPasta(erro)) return r;
@@ -207,6 +215,7 @@ public:
         if (ec) erro = "Erro ao listar arquivos."; else erro.clear();
         sort(r.begin(), r.end()); return r;
     }
+    //escreve em .tmp e depois substitui o destino final
     bool salvar(const Grafo& g, const string& nome, string& erro) const {
         if (nome.empty() || nome == "." || nome == ".." || nome.find('/') != string::npos || nome.find('\\') != string::npos) {
             erro = "Informe um nome valido, sem caminho."; return false;
@@ -232,6 +241,7 @@ public:
         if (ec) { fs::remove(temp); erro = "Falha ao finalizar arquivo: " + ec.message(); return false; }
         erro.clear(); return true;
     }
+    //reconstroi estrutura do grafo em memoria
     bool carregar(const fs::path& caminho, Grafo& destino, string& erro) const {
         ifstream in(caminho);
         string token;
@@ -239,6 +249,7 @@ public:
         int dir;
         if (!(in >> token >> dir) || token != "DIRECIONADO" || (dir != 0 && dir != 1)) { erro = "Campo DIRECIONADO invalido."; return false; }
         Grafo temp(dir == 1);
+        //leitura e reconstrucao dos vertices
         size_t nv;
         if (!(in >> token >> nv) || token != "VERTICES" || nv > 10000000) { erro = "Quantidade de vertices invalida."; return false; }
         for (size_t i = 0; i < nv; ++i) {
@@ -246,6 +257,7 @@ public:
             if (!(in >> tipo >> quoted(id) >> lat >> lon) || tipo != "V") { erro = "Registro de vertice incompleto."; return false; }
             string e; if (!temp.adicionarVertice(id, lat, lon, e)) { erro = e; return false; }
         }
+        //leitura e reconstrucao das conexoes
         size_t nc;
         if (!(in >> token >> nc) || token != "CONEXOES" || nc > 10000000) { erro = "Quantidade de conexoes invalida."; return false; }
         for (size_t i = 0; i < nc; ++i) {
@@ -258,6 +270,7 @@ public:
             string e; if (!temp.adicionarConexao(id, o, d, peso, ct, e)) { erro = e; return false; }
         }
         if (!(in >> token) || token != "FIM" || (in >> token)) { erro = "Arquivo incompleto ou contem dados extras."; return false; }
+        //atualiza objeto destino
         if (!temp.reconstruirParaCarga(erro)) return false;
         destino.substituirPor(move(temp)); erro.clear(); return true;
     }
@@ -265,13 +278,17 @@ public:
 
 class AlgoritmosGrafo {
 private:
+    //raio medio usado em haversine
     static constexpr double RAIO_TERRA_KM = 6371.0088;
+    //graus pra radianos
     static double radianos(double graus) { return graus * acos(-1.0) / 180.0; }
+    //trata para formato DOT do graphviz
     static string escaparDot(const string& s) {
         string r;
         for (char c : s) { if (c == '\\' || c == '"') r += '\\'; if (c == '\n' || c == '\r') r += ' '; else r += c; }
         return r;
     }
+    //busca conexao por id e retorna ponteiro
     static const Conexao* conexaoPorId(const Grafo& g, const string& id) {
         for (const auto& c : g.getConexoes()) if (c.getId() == id) return &c;
         return nullptr;
@@ -281,11 +298,13 @@ private:
                             const set<string>* conexoesCaminho, string& erro) {
         ofstream out(dot, ios::trunc);
         if (!out) { erro = "Nao foi possivel criar " + dot; return false; }
+        //escreve configuracoes globais do grafo no formato graphviz
         out << (g.ehDirecionado() ? "digraph" : "graph") << " G {\n"
             << "  graph [overlap=false, splines=true, bgcolor=white, ranksep=0.7];\n"
             << "  node [shape=circle, style=filled, fontname=Arial, color=\"#355C7D\"];\n"
             << "  edge [fontname=Arial, fontsize=10];\n";
         const vector<string> paleta = {"#F94144", "#277DA1", "#90BE6D", "#F9C74F", "#9B5DE5", "#F9844A", "#43AA8B", "#577590", "#F15BB5", "#B8DE6F", "#00BBF9", "#C77DFF"};
+        //formatacao dos vertices no arquivo DOT
         for (const auto& v : g.getVertices()) {
             out << "  \"" << escaparDot(v.getId()) << "\" [label=\"" << escaparDot(v.getId()) << "\n(" << v.getLatitude() << ", " << v.getLongitude() << ")\"";
             if (cores) {
@@ -296,6 +315,7 @@ private:
             } else out << ", fillcolor=\"#DCEBFA\"";
             out << "];\n";
         }
+        //formatacao das conexoes no arquivo DOT
         for (const auto& c : g.getConexoes()) {
             bool destaque = conexoesCaminho && conexoesCaminho->count(c.getId());
             out << "  \"" << escaparDot(c.getOrigem()) << "\" " << (g.ehDirecionado() ? "->" : "--")
@@ -315,10 +335,15 @@ private:
     }
 public:
     static double haversineKm(const Vertice& a, const Vertice& b) {
+        //graus para radianos
         double lat1 = radianos(a.getLatitude()), lat2 = radianos(b.getLatitude());
+        //diferencas de latitude e longitude
         double dlat = lat2 - lat1, dlon = radianos(b.getLongitude() - a.getLongitude());
+        //aplica termo da formula
         double h = sin(dlat / 2) * sin(dlat / 2) + cos(lat1) * cos(lat2) * sin(dlon / 2) * sin(dlon / 2);
+        //trata imprecisões para manter h em [0.0, 1.0]
         h = max(0.0, min(1.0, h));
+        //distancia final * pelo diametro da terra e arco seno
         return 2.0 * RAIO_TERRA_KM * asin(sqrt(h));
     }
     static bool executarDsatur(const Grafo& g, string& erro) {
@@ -326,42 +351,51 @@ public:
         map<string, set<string>> vizinhos;
         map<string, int> cores;
         for (const auto& v : g.getVertices()) vizinhos[v.getId()];
-        // Um laco impede uma coloracao propria: o vertice seria adjacente a si mesmo.
+        //verifica laco proprio
         for (const auto& c : g.getConexoes()) {
             if (c.getOrigem() == c.getDestino()) {
                 erro = "DSATUR nao pode produzir coloracao propria quando existe laco no vertice '" + c.getOrigem() + "'.";
                 return false;
             }
         }
-        // DSATUR trata a adjacencia como nao direcionada para fins de coloracao.
+        //dsatur trata adjacencia como nao direcionada para coloracao
         for (const auto& c : g.getConexoes()) {
             if (c.getOrigem() != c.getDestino()) {
                 vizinhos[c.getOrigem()].insert(c.getDestino());
                 vizinhos[c.getDestino()].insert(c.getOrigem());
             }
         }
+        //colore cada vertice ate todos estarem coloridos
         while (cores.size() < g.getVertices().size()) {
             string escolhido;
             size_t melhorSaturacao = 0, melhorGrau = 0;
             bool primeiro = true;
+            //proximo vertice 1:+cores vizinhos 2:+vizinhos
             for (const auto& v : g.getVertices()) {
                 const string& id = v.getId();
+                //ignora ja coloridos
                 if (cores.count(id)) continue;
+                //calcula grau de saturacao
                 set<int> coresVizinhas;
                 for (const auto& n : vizinhos[id]) {
                     auto it = cores.find(n); if (it != cores.end()) coresVizinhas.insert(it->second);
                 }
                 size_t sat = coresVizinhas.size(), grau = vizinhos[id].size();
+                //atualiza melhor candidato pelos criterios
                 if (primeiro || sat > melhorSaturacao || (sat == melhorSaturacao && grau > melhorGrau)) {
                     escolhido = id; melhorSaturacao = sat; melhorGrau = grau; primeiro = false;
                 }
             }
+            //descobre cores usadas pelos vizinhos
             set<int> usadas;
             for (const auto& n : vizinhos[escolhido]) if (cores.count(n)) usadas.insert(cores[n]);
+            //atribui a menor cor disponivel ao vertice
             int cor = 0; while (usadas.count(cor)) ++cor;
             cores[escolhido] = cor;
         }
+        //quantidade de cores diferentes
         int quantidade = 0; for (const auto& p : cores) quantidade = max(quantidade, p.second + 1);
+        //gera graficos
         if (!escreverDot(g, "grafo_original.dot", "grafo_original.jpg", nullptr, nullptr, nullptr, erro)) return false;
         if (!escreverDot(g, "grafo_dsatur.dot", "grafo_dsatur.jpg", &cores, nullptr, nullptr, erro)) return false;
         cout << "DSATUR concluiu: " << quantidade << " cor(es) utilizada(s).\n"
@@ -372,45 +406,61 @@ public:
     static bool executarAStar(const Grafo& g, const string& inicio, const string& destino, string& erro) {
         const Vertice* vInicio = g.buscarVertice(inicio); const Vertice* vDestino = g.buscarVertice(destino);
         if (!vInicio || !vDestino) { erro = "Vertice de inicio ou destino nao existe."; return false; }
+        cout << " VALORES DE h(n) CALCULADOS (Haversine ate o destino: " << destino << ")\n";
+        for (const auto& v : g.getVertices()) {
+            double h = haversineKm(v, *vDestino);
+            cout << "  * h(" << left << setw(20) << v.getId() << ") = " 
+                << fixed << setprecision(2) << h << " km\n";
+        }
         if (inicio == destino) {
             set<string> vs{inicio}; set<string> cs;
             if (!escreverDot(g, "grafo_caminho_astar.dot", "grafo_caminho_astar.jpg", nullptr, &vs, &cs, erro)) return false;
             cout << "Inicio e destino sao o mesmo vertice. Custo: 0 km.\n"; return true;
         }
-        // Para manter a heuristica admissivel, os pesos usados como custos precisam estar em km.
         for (const auto& c : g.getConexoes()) if (c.getPeso() < 0) {
             erro = "A* nao aceita pesos negativos. Use pesos nao negativos em quilometros."; return false;
         }
+        //estrutura do no na fila de prioridade (f = g + h)
         struct Estado { double f; string id; };
         struct Comparar { bool operator()(const Estado& a, const Estado& b) const { return a.f > b.f; } };
+        //fila de prioridade
         priority_queue<Estado, vector<Estado>, Comparar> abertos;
+        //menor custo do inicio ate cada no
         map<string, double> gScore;
+        //mapeamento para reconstrucao do caminho
         map<string, string> anteriorVertice, anteriorConexao;
+        //nos ja avaliados
         set<string> fechados;
+        //inicia distâncias g(n) com infinito pra todos vertices
         for (const auto& v : g.getVertices()) gScore[v.getId()] = numeric_limits<double>::infinity();
         gScore[inicio] = 0.0;
         abertos.push({haversineKm(*vInicio, *vDestino), inicio});
         while (!abertos.empty()) {
             string atual = abertos.top().id; abertos.pop();
             if (fechados.count(atual)) continue;
+            //destino alcancado com o menor custo f(n)
             if (atual == destino) break;
             fechados.insert(atual);
             const Vertice* vert = g.buscarVertice(atual);
             for (const auto& adj : vert->getAdjacentes()) {
                 const Conexao* c = conexaoPorId(g, adj.getConexaoId());
                 if (!c || fechados.count(adj.getVizinhoId())) continue;
+                //custo tentativo do caminho acumulado: g + peso da aresta/arco
                 double tentativo = gScore[atual] + c->getPeso();
                 if (tentativo < gScore[adj.getVizinhoId()]) {
                     gScore[adj.getVizinhoId()] = tentativo;
                     anteriorVertice[adj.getVizinhoId()] = atual;
                     anteriorConexao[adj.getVizinhoId()] = c->getId();
                     const Vertice* viz = g.buscarVertice(adj.getVizinhoId());
-                    double h = haversineKm(*viz, *vDestino); // h(n) sempre em relacao ao destino escolhido
+                    //heurística h(n) em relacao ao destino
+                    double h = haversineKm(*viz, *vDestino);
+                    // Insere f(n) = g(n) + h(n) na fila
                     abertos.push({tentativo + h, adj.getVizinhoId()});
                 }
             }
         }
         if (!isfinite(gScore[destino])) { erro = "Nao existe caminho entre os vertices informados."; return false; }
+        //reconstrucao do caminho percorrido a partir dos ponteiros "anterior"
         set<string> verticesCaminho{destino}, conexoesCaminho;
         vector<string> caminho{destino};
         string atual = destino;
@@ -421,6 +471,7 @@ public:
             conexoesCaminho.insert(anteriorConexao[atual]);
             atual = anteriorVertice[atual]; verticesCaminho.insert(atual); caminho.push_back(atual);
         }
+        //caminho da origem ao destino = vetor inverso
         reverse(caminho.begin(), caminho.end());
         if (!escreverDot(g, "grafo_caminho_astar.dot", "grafo_caminho_astar.jpg", nullptr,
                          &verticesCaminho, &conexoesCaminho, erro)) return false;

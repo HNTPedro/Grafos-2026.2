@@ -1,0 +1,31 @@
+GRAFO_CPP_2
+DIRECIONADO 0
+VERTICES 12
+V "Curitiba" -25.4284 -49.2733
+V "Paranagua" -25.5204 -48.5092
+V "Ponta Grossa" -25.0916 -50.1668
+V "Londrina" -23.3045 -51.1696
+V "Maringa" -23.4209 -51.9331
+V "Umuarama" -23.7661 -53.3250
+V "Toledo" -24.7136 -53.7431
+V "Cascavel" -24.9578 -53.4595
+V "Foz do Iguacu" -25.5163 -54.5854
+V "Francisco Beltrao" -26.0811 -53.0550
+V "Guarapuava" -25.3907 -51.4628
+V "Sao Mateus do Sul" -25.8711 -50.3828
+CONEXOES 14
+C "c1" "Paranagua" "Curitiba" 90 ARESTA
+C "c2" "Curitiba" "Ponta Grossa" 114 ARESTA
+C "c3" "Curitiba" "Sao Mateus do Sul" 157 ARESTA
+C "c4" "Sao Mateus do Sul" "Francisco Beltrao" 354 ARESTA
+C "c5" "Francisco Beltrao" "Cascavel" 186 ARESTA
+C "c6" "Cascavel" "Foz do Iguacu" 143 ARESTA
+C "c7" "Cascavel" "Guarapuava" 250 ARESTA
+C "c8" "Guarapuava" "Ponta Grossa" 165 ARESTA
+C "c9" "Cascavel" "Toledo" 50 ARESTA
+C "c10" "Toledo" "Umuarama" 126 ARESTA
+C "c11" "Umuarama" "Maringa" 190 ARESTA
+C "c12" "Maringa" "Ponta Grossa" 314 ARESTA
+C "c13" "Maringa" "Londrina" 114 ARESTA
+C "c14" "Londrina" "Ponta Grossa" 273 ARESTA
+FIM
